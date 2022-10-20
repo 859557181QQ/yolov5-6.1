@@ -1,0 +1,7 @@
+train: C:/cx/yolov5-6.1/NEU-DET/images/train  # train images (relative to 'path') 128 images
+val: C:/cx/yolov5-6.1/NEU-DET/images/val  # val images (relative to 'path') 128 images
+
+# Classes
+nc: 6  # number of classes
+
+names: ['razing', 'inclusion', 'patches', 'pitted_surface', 'rolled-in_scale', 'scratches']

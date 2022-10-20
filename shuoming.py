@@ -1,0 +1,247 @@
+"""
+说明记录下跑实验的过程
+！！！实验整个过程必须在英文目录下进行，尽量不要使用过长的路径！！！
+
+
+一、训练过程
+1.首先去yolov5的github下载源码
+
+2.准备好数据集并划分test、train、val 其中train和val最为重要
+    注意：
+    ①标签文件要txt、图片jpg（图片png理论也可，但本人未测试）
+    ②划分数据集时候要注意比例、可以使用脚本自动划分
+
+3.下载权重文件 yolo5s.pt      yolo5m.pt       yolo5l.pt
+    权重文件放置目录不指定，但一般建议放在主目录下新建的文件夹内，如本实验为    C:\cx\yolov5-6.1\pretrained\yolov5s.pt
+
+4.用pycharm打开yolov5源码工程后在终端内输入命令 pip install -r requirements.txt 安装依赖库
+    但极有可能报错，一般涉及的问题就是下载不下来
+
+    常见错误及其结局方法：
+    ①
+    WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None))
+    此错误是下载源有问题，但一般换源后还难以解决，主要是系统对豆瓣源不信任，导致即便设置了豆瓣源也下载失败
+    因此要给出信任豆瓣源的命令
+    即用以下命令可以正常下载
+    pip install packageName  -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
+    # packageName写要安装的包名即可
+
+    也可使用    pip install -r requirements.txt  -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
+    安装全部依赖包
+
+    但此为临时方法，每次安装都需要后边的长串，一次性解决方法详见以下链接
+    https://blog.csdn.net/jsut_rick/article/details/85765215
+
+    ②
+    在下载依赖包过程中可能会报错
+    WARNING:Ignore distutils configs in setup.cfg due to encoding errors
+    一般是由于编码错误，此错误有时不影响程序运行，可以不改，也不常见此错误
+    解决方法：
+    https://blog.csdn.net/a1130061818/article/details/123811002
+    https://jingyan.baidu.com/article/25648fc1471e6a9191fd002e.html
+
+5. 预训练模型和数据集都准备好了，就可以开始训练自己的yolov5目标检测模型了，训练目标检测模型需要修改两个yaml文件中的参数。
+    一个是data目录下的相应的yaml文件，一个是model目录文件下的相应的yaml文件。
+    此两个文件 yolo源码里没有，我们可以复制coco128.yaml和yolo5s.yaml来分别创建data.yaml和yolo5s_data.yaml（命名不唯一）
+
+    其中data.yaml只留下面语句，主要修改的就是train和val路径，nc，和names
+
+    train: C:/cx/yolov5-6.1/NEU-DET/images/train  # train images (relative to 'path') 128 images
+    val: C:/cx/yolov5-6.1/NEU-DET/images/val  # val images (relative to 'path') 128 images
+
+    # Classes
+    nc: 6  # number of classes
+
+    names: ['razing', 'inclusion', 'patches', 'pitted_surface', 'rolled-in_scale', 'scratches']
+
+
+    yolo5s_data.yaml就只需要改nc即可
+
+6.修改train.py
+
+    train.py内opt模型主要参数解析：
+
+    --weights：初始化的权重文件的路径地址
+    --cfg：模型yaml文件的路径地址
+    --data：数据yaml文件的路径地址
+    --hyp：超参数文件路径地址
+    --epochs：训练轮次
+    --batch-size：喂入批次文件的多少
+    --img-size：输入图片尺寸
+    --rect:是否采用矩形训练，默认False
+    --resume:接着打断训练上次的结果接着训练
+    --nosave:不保存模型，默认False
+    --notest:不进行test，默认False
+    --noautoanchor:不自动调整anchor，默认False
+    --evolve:是否进行超参数进化，默认False
+    --bucket:谷歌云盘bucket，一般不会用到
+    --cache-images:是否提前缓存图片到内存，以加快训练速度，默认False
+    --image-weights：使用加权图像选择进行训练
+    --device:训练的设备，cpu；0(表示一个gpu设备cuda:0)；0,1,2,3(多个gpu设备)
+    --multi-scale:是否进行多尺度训练，默认False
+    --single-cls:数据集是否只有一个类别，默认False
+    --adam:是否使用adam优化器
+    --sync-bn:是否使用跨卡同步BN,在DDP模式使用
+    --local_rank：DDP参数，请勿修改
+    --workers：最大工作核心数
+    --project:训练模型的保存位置
+    --name：模型保存的目录名称
+    --exist-ok：模型目录是否存在，不存在就创建
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--weights', type=str, default='yolov5s.pt', help='initial weights path')
+    parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
+    parser.add_argument('--data', type=str, default='data/coco128.yaml', help='data.yaml path')
+    parser.add_argument('--hyp', type=str, default='data/hyp.scratch.yaml', help='hyperparameters path')
+    parser.add_argument('--epochs', type=int, default=300)
+    parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs')
+    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='[train, test] image sizes')
+    parser.add_argument('--rect', action='store_true', help='rectangular training')
+    parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
+    parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
+    parser.add_argument('--notest', action='store_true', help='only test final epoch')
+    parser.add_argument('--noautoanchor', action='store_true', help='disable autoanchor check')
+    parser.add_argument('--evolve', action='store_true', help='evolve hyperparameters')
+    parser.add_argument('--bucket', type=str, default='', help='gsutil bucket')
+    parser.add_argument('--cache-images', action='store_true', help='cache images for faster training')
+    parser.add_argument('--image-weights', action='store_true', help='use weighted image selection for training')
+    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--multi-scale', action='store_true', help='vary img-size +/- 50%%')
+    parser.add_argument('--single-cls', action='store_true', help='train multi-class data as single-class')
+    parser.add_argument('--adam', action='store_true', help='use torch.optim.Adam() optimizer')
+    parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
+    parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
+    parser.add_argument('--workers', type=int, default=8, help='maximum number of dataloader workers')
+    parser.add_argument('--project', default='runs/train', help='save to project/name')
+    parser.add_argument('--entity', default=None, help='W&B entity')
+    parser.add_argument('--name', default='exp', help='save to project/name')
+    parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+    parser.add_argument('--quad', action='store_true', help='quad dataloader')
+    parser.add_argument('--linear-lr', action='store_true', help='linear LR')
+    parser.add_argument('--label-smoothing', type=float, default=0.0, help='Label smoothing epsilon')
+    parser.add_argument('--upload_dataset', action='store_true', help='Upload dataset as W&B artifact table')
+    parser.add_argument('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval for W&B')
+    parser.add_argument('--save_period', type=int, default=-1, help='Log model after every "save_period" epoch')
+    parser.add_argument('--artifact_alias', type=str, default="latest", help='version of dataset artifact to be used')
+
+    ！！！主要修改以下语句
+    #以下几句语句，一般ROOT不要删掉，有些网络的教程吧root删掉 直接放路径，但本人尝试时候会报错，所以一般建议不删除root
+    #推测：root是根的意思，不加root要输入绝对路径，加root可以输入相对路径，但未测试此方法
+
+    parser.add_argument('--weights', type=str, default=ROOT / 'pretrained/yolov5s.pt', help='initial weights path')
+    #此处只修改default，放置的是yolo预训练模型的路径
+
+    parser.add_argument('--cfg', type=str, default=ROOT / 'models/yolov5s.yaml', help='model.yaml path')
+    #此处只修改default，放置的是yolo训练模型的配置文件yaml的路径
+
+    parser.add_argument('--data', type=str, default=ROOT / 'data/data.yaml', help='dataset.yaml path')
+    #此处只修改default，放置的是yolo数据集的配置文件yaml的路径
+
+    parser.add_argument('--epochs', type=int, default=50)
+    #此处只修改default，指的是要训练的轮数，默认为300，即训练三百轮
+
+    parser.add_argument('--batch-size', type=int, default=4, help='total batch size for all GPUs, -1 for autobatch')
+    #此处只修改default，指的是每次传入训练的图片个数
+
+    parser.add_argument('--workers', type=int, default=0, help='max dataloader workers (per RANK in DDP mode)')
+    #此处只修改default，但也可不修改，如果是cpu跑就改为0
+
+    修改好后就可以run了
+
+    在程序run起来后可能出现常见错误：
+    ①
+    RuntimeError: result type Float can‘t be cast to the desired output type long int
+    出错原因是yolo的版本问题，一般使用的不是yolov5-master版本就出现此错误
+    解决方法：
+    https://www.jb51.cc/python/2947097.html
+    https://blog.csdn.net/weixin_54713879/article/details/125612388
+
+    ②
+    报错gpu内存不足或者cpu内存不足则要调小batch_size和workers的default
+
+    ③
+    报错OSError：页面文件太小无法完成操作
+    此错误原因是虚拟内存不足
+    解决方法：（未测试）
+    utils/datasets.py这个文件，将里面的    num_workers=nw,   语句里的nw改为0即可，
+    即   num_workers=0
+
+
+二、测试过程
+    模型训练完成后会在runs/train目录下生成一个 exp？ 文件夹，其中的weights文件夹内，里面包含了best.pt和last.pt
+    一般我们使用best.pt进行测试
+
+1.测试之前要先修改根目录下的detect.py文件
+
+    detect.py内opt模型主要参数解析：
+
+    --weights:权重的路径地址
+    --source:测试数据，可以是图片/视频路径，也可以是'0'(电脑自带摄像头),也可以是rtsp等视频流
+    --output:网络预测之后的图片/视频的保存路径
+    --img-size:网络输入图片大小
+    --conf-thres:置信度阈值
+    --iou-thres:做nms的iou阈值
+    --device:是用GPU还是CPU做推理
+    --view-img:是否展示预测之后的图片/视频，默认False
+    --save-txt:是否将预测的框坐标以txt文件形式保存，默认False
+    --classes:设置只保留某一部分类别，形如0或者0 2 3
+    --agnostic-nms:进行nms是否也去除不同类别之间的框，默认False
+    --augment:推理的时候进行多尺度，翻转等操作(TTA)推理
+    --update:如果为True，则对所有模型进行strip_optimizer操作，去除pt文件中的优化器等信息，默认为False
+    --project：推理的结果保存在runs/detect目录下
+    --name：结果保存的文件夹名称
+
+    parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
+    parser.add_argument('--source', type=str, default='data/images', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
+    parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
+    parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
+    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--view-img', action='store_true', help='display results')
+    parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
+    parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
+    parser.add_argument('--nosave', action='store_true', help='do not save images/videos')
+    parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --class 0, or --class 0 2 3')
+    parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
+    parser.add_argument('--augment', action='store_true', help='augmented inference')
+    parser.add_argument('--update', action='store_true', help='update all models')
+    parser.add_argument('--project', default='runs/detect', help='save results to project/name')
+    parser.add_argument('--name', default='exp', help='save results to project/name')
+    parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+
+
+    ！！！一般情况下要修改的语句只有两条
+    ①
+    parser.add_argument('--weights', nargs='+', type=str, default='runs/train/exp/weights/best.pt', help='model.pt path(s)')
+    #此处只修改default，要放置best.pt的路径
+
+    ②
+    parser.add_argument('--source', type=str, default='000295.jpg', help='source')
+    #此处只修改default，放置的是要测试的文件路径
+    比如
+    要测试一张图片就写入此图片的路径
+    要测试一段视频就写入此视频的路径
+    要通过摄像头进行测试就将路径写为0
+
+    #注意！！！：利用摄像头测试时可能会报错    TypeError:argument of type 'int' is not iterable
+    推测报错原因可能是将路径写入0后，0为int类型，而路径一般为string类型，因此需要强制转换下格式
+    解决方法：（未测试）
+    utils/datasets.py这个文件，将里面的
+    if 'youtube.com/' in s or 'youtu.be/' in s:  # if source is YouTube video
+    此语句里的 s 改为 str(s) 即可，
+    即   if 'youtube.com/' in str(s) or 'youtu.be/' in str(s):  # if source is YouTube video
+
+    老版本yolov5可能为
+    if 'youtube.com/' in url or 'youtu.be/' in url:  # if source is YouTube video
+    同理可改为
+    if 'youtube.com/' in str(url) or 'youtu.be/' in str(url):  # if source is YouTube video
+
+    ③
+    执行train.py后出现错误
+    AttributeError: Can‘t get attribute ‘SPPF‘ on ＜module ‘models.common‘ from ‘H:\\yolov5-5.0\\models\\
+    解决方法为修改common.py文件
+    详见：
+    https://blog.csdn.net/weixin_50920579/article/details/121307820
+
+    推理测试结束以后，在run下面会生成一个detect目录，推理结果会保存在exp目录下。
+"""
